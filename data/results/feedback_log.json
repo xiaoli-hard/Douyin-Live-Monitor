@@ -1,0 +1,114 @@
+[
+  {
+    "feedback_time": "2025-07-10T14:30:00.000000",
+    "report_timestamp": "2025-07-10T14:15:50.066502",
+    "strategy_id": "C-2",
+    "strategy_name": "评论区扣1",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-10T12:30:00.000000",
+    "report_timestamp": "2025-07-10T12:15:21.278411",
+    "strategy_id": "B-1",
+    "strategy_name": "算账对比法",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-10T11:30:00.000000",
+    "report_timestamp": "2025-07-10T11:08:02.185031",
+    "strategy_id": "A-3",
+    "strategy_name": "限时限量",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-10T14:56:42.389072",
+    "report_timestamp": "2025-07-10T14:15:50.066502",
+    "strategy_id": "C-2",
+    "strategy_name": "评论区扣1",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-10T14:56:45.124509",
+    "report_timestamp": "2025-07-10T14:15:50.066502",
+    "strategy_id": "C-2",
+    "strategy_name": "评论区扣1",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-10T15:14:08.676693",
+    "report_timestamp": "2025-07-10T14:15:50.066502",
+    "strategy_id": "C-2",
+    "strategy_name": "评论区扣1",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T14:29:49.707738",
+    "report_timestamp": "2025-07-11T14:09:15.392163",
+    "strategy_id": "ai-gen-1752214105",
+    "strategy_name": "实时逼单+库存动态强化",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T14:57:54.598642",
+    "report_timestamp": "2025-07-11T10:15:39.560448",
+    "strategy_id": "ai-gen-1752200100",
+    "strategy_name": "话术信息强化战术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T14:58:02.514100",
+    "report_timestamp": "2025-07-11T09:54:25.797935",
+    "strategy_id": "ai-gen-1752198810",
+    "strategy_name": "互动引导强化战术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T14:58:21.308513",
+    "report_timestamp": "2025-07-10T16:33:07.524747",
+    "strategy_id": "ai-gen-1752136298",
+    "strategy_name": "黄金3分钟卖点聚焦法",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T17:14:06.548466",
+    "report_timestamp": "2025-07-11T17:13:51.665578",
+    "strategy_id": "ai-gen-1752225148",
+    "strategy_name": "老粉专属大额券+限时赠品刺激大件转化",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-11T17:14:07.604771",
+    "report_timestamp": "2025-07-11T17:13:51.665578",
+    "strategy_id": "ai-gen-1752225149",
+    "strategy_name": "互动问答+评论区福利引导实时互动",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-14T12:14:23.856245",
+    "report_timestamp": "2025-07-14T12:13:24.085092",
+    "strategy_id": "ai-gen-1752466336",
+    "strategy_name": "大件价值锚定战术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-14T15:24:30.050623",
+    "report_timestamp": "2025-07-14T15:12:52.547401",
+    "strategy_id": "ai-gen-1752477123",
+    "strategy_name": "大件价值锚定与紧迫感强化",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-23T16:08:21.308089",
+    "report_timestamp": "2025-07-23T16:03:23.910347",
+    "strategy_id": "ai-gen-1753257754",
+    "strategy_name": "大件价值锚定+家庭场景逼单",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-23T16:56:12.550963",
+    "report_timestamp": "2025-07-23T16:15:54.793257",
+    "strategy_id": "ai-gen-1753258513",
+    "strategy_name": "黄金30秒逼单法",
+    "action": "adopted"
+  }
+]

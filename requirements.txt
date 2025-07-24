@@ -1,0 +1,6 @@
+openai==1.93.0
+streamlit==1.35.0
+pandas==2.2.2
+markdown==3.5.2
+jiter==0.4.0
+textblob==0.17.1
