@@ -13,6 +13,24 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt6.QtCore import Qt, QObject, pyqtSignal
 import json
 
+def load_config(config_path="config.json"):
+    """
+    加载配置文件
+    :param config_path: 配置文件路径
+    :return: 配置字典
+    """
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"加载配置文件失败: {e}")
+        # 返回默认配置
+        return {
+            "data_storage": {
+                "realtime_output_dir": "d:\\Text\\conclusion\\text"
+            }
+        }
+
 # === NLP清洗相关代码开始 ===
 import re
 from aip import AipNlp
@@ -22,7 +40,7 @@ APP_ID = '119362232'
 API_KEY = '8PRLv5GcZnuckruktdaOADU1'
 SECRET_KEY = '32GyMDQ7yWw0ctc8mVkN6CZWFDC1yKS'
 client = AipNlp(APP_ID, API_KEY, SECRET_KEY)
-custom_words = ["六一八返场福利", "香奈儿", "Prada", "留香珠"]
+custom_words = ["六一八返场福利", "香奈儿", "Prada", "欧莱雅", "洗发水", "护发", "滋养修复", "柔顺洗发露", "润养秀发", "发质洗发乳"]
 
 def protect_custom_words(text, custom_words):
     for idx, word in enumerate(custom_words):
@@ -170,16 +188,25 @@ def clean_text_nlp(input_json_path, output_dir):
     if not found:
         existing_data.append(result)
 
-    # 按时间段排序，保留最新的两个时间段
-    def get_start_hour(item):
-        if not item["小时"]:
-            return -1
+    # 按日期和时间段排序，保留最新的数据
+    def get_datetime_key(item):
         try:
-            return int(item["小时"].split(":")[0])
+            # 解析日期
+            date_str = item["日期"]
+            hour_str = item["小时"]
+            if not hour_str:
+                return datetime.min
+            
+            # 提取小时
+            hour = int(hour_str.split(":")[0])
+            
+            # 创建datetime对象进行比较
+            year, month, day = map(int, date_str.split("-"))
+            return datetime(year, month, day, hour)
         except:
-            return -1
+            return datetime.min
 
-    existing_data.sort(key=get_start_hour, reverse=True)
+    existing_data.sort(key=get_datetime_key, reverse=True)
     # 去重，每个时间段只保留一个条目
     seen_time_ranges = set()
     unique_data = []
@@ -215,6 +242,11 @@ def clean_text_nlp(input_json_path, output_dir):
 # === NLP清洗相关代码结束 ===
 
 try:
+    # 添加numpy兼容性补丁，解决funasr导入时的numpy.complex错误
+    import numpy as np
+    if not hasattr(np, 'complex'):
+        np.complex = complex
+    
     from funasr import AutoModel
     from funasr.utils.postprocess_utils import rich_transcription_postprocess
     FUNASR_AVAILABLE = True
@@ -310,11 +342,16 @@ class SenseVoicePro(QMainWindow):
     def init_realtime_tab_ui(self):
         layout = QVBoxLayout(self.realtime_tab)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # --- 保存位置 ---
+    
+        # --- 保存位置 --- 
         save_loc_layout = QHBoxLayout()
         save_loc_layout.addWidget(QLabel("识别文本保存目录:"))
-        self.realtime_output_path = QLineEdit("d:\\Text\\conclusion\\text")
+        
+        # 从配置文件读取默认路径
+        config = load_config(os.path.join(os.path.dirname(__file__), "config.json"))
+        default_output_dir = config.get("data_storage", {}).get("realtime_output_dir", "d:\\Text\\conclusion\\text")
+        
+        self.realtime_output_path = QLineEdit(default_output_dir)
         save_loc_layout.addWidget(self.realtime_output_path)
         self.realtime_select_dir_btn = QPushButton("选择目录")
         save_loc_layout.addWidget(self.realtime_select_dir_btn)

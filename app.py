@@ -82,13 +82,29 @@ def update_feedback(report_timestamp: str, strategy: Dict[str, Any], action: str
         json.dump(log_data, f, ensure_ascii=False, indent=2)
 
 def get_reports_by_date(target_date):
-    """获取特定日期的所有MD报告文件"""
+    """获取特定日期的所有MD报告文件，按时间戳排序"""
     if not os.path.exists(REPORTS_DIR):
         os.makedirs(REPORTS_DIR, exist_ok=True)
         return []
     date_str_pattern = target_date.strftime('%Y-%m-%d')
     report_files = [f for f in os.listdir(REPORTS_DIR) if f.endswith('.md') and date_str_pattern in f]
-    report_files.sort(reverse=True)
+    
+    # 按时间戳排序：提取文件名中的时间信息进行排序
+    def extract_timestamp(filename):
+        try:
+            # 从文件名中提取时间戳，格式：2025-08-29_16-34_analysis_result.md
+            import re
+            match = re.search(r'(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})', filename)
+            if match:
+                date_part, hour, minute = match.groups()
+                timestamp_str = f"{date_part} {hour}:{minute}:00"
+                return datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+        except:
+            pass
+        return datetime.min  # 如果解析失败，返回最小时间
+    
+    # 按时间戳倒序排序（最新的在前）
+    report_files.sort(key=extract_timestamp, reverse=True)
     return [os.path.join(REPORTS_DIR, f) for f in report_files]
 
 def load_report(report_path):
@@ -107,7 +123,7 @@ def get_baseline_system():
     """使用Streamlit缓存来初始化并返回基线系统实例。UI元素已被移除以修复缓存错误。"""
     try:
         storage_path = os.path.join(SCRIPT_DIR, 'data', 'baseline_storage')
-        history_path = os.path.join(SCRIPT_DIR, 'data', 'baseline_data', 'historical_data.csv')
+        history_path = os.path.join(SCRIPT_DIR, 'data', 'baseline_data', '欧莱雅数据登记 - 自动化数据 (4).csv')
         
         if not os.path.exists(history_path):
             print(f"❌ 错误：找不到历史数据文件于 '{history_path}'。基线系统无法启动。")
@@ -323,33 +339,33 @@ def extract_product_mentions(report_content):
     # 提取表格内容（不包括标题）
     table_content = product_section_match.group(1)
     
-    # 定义PWU相关产品关键词
-    pwu_related_keywords = [
-        'PWU', '洗衣留香珠', '留香珠', '洗衣珠', '衣物护理', 
-        '持久留香', '除菌除螨', '居家好物', '衣物香水'
+    # 定义欧莱雅洗发水相关产品关键词
+    loreal_related_keywords = [
+        '欧莱雅', '洗发水', '护发', '滋养修复', '柔顺', '润养', 
+        '发质', '洗发乳', '洗发露', '护发素', '头发护理'
     ]
     
-    # 过滤表格内容，只保留PWU相关产品
+    # 过滤表格内容，只保留欧莱雅洗发水相关产品
     lines = table_content.split('\n')
     header_lines = lines[:2]  # 保留表头和分隔行
     data_lines = []
     
     for line in lines[2:]:  # 从第3行开始是数据行
         if '|' in line:
-            # 检查是否包含PWU相关关键词
-            is_pwu_related = False
-            for keyword in pwu_related_keywords:
+            # 检查是否包含欧莱雅洗发水相关关键词
+            is_loreal_related = False
+            for keyword in loreal_related_keywords:
                 if keyword in line:
-                    is_pwu_related = True
+                    is_loreal_related = True
                     break
             
-            # 如果是PWU相关产品，添加到结果中
-            if is_pwu_related:
+            # 如果是欧莱雅洗发水相关产品，添加到结果中
+            if is_loreal_related:
                 data_lines.append(line)
     
-    # 如果没有找到PWU相关产品，返回一个提示信息
+    # 如果没有找到欧莱雅洗发水相关产品，返回一个提示信息
     if not data_lines:
-        return "未找到与PWU相关的产品提及分析。"
+        return "未找到与欧莱雅洗发水相关的产品提及分析。"
     
     # 组合表格
     filtered_table = '\n'.join(header_lines + data_lines)
@@ -358,28 +374,47 @@ def extract_product_mentions(report_content):
     return f"## 🔍 产品提及分析\n{filtered_table}"
 
 def filter_report_for_display(report_content):
-    """从报告内容中移除指定的部分，以便在UI中更简洁地显示。"""
+    """过滤报告内容，移除特定部分，避免破坏HTML结构"""
     if not report_content:
         return ""
     
-    # 移除"产品提及分析"部分
-    # 使用 re.DOTALL 使 '.' 匹配包括换行符在内的任何字符
-    # 非贪婪匹配 .*? 来确保只匹配到下一个二级标题或文件结尾
-    filtered_content = re.sub(r'## 🔍 产品提及分析.*?(?=\n## |\Z)', '', report_content, flags=re.DOTALL)
-    
-    # 移除"动态基线对比分析"部分
-    filtered_content = re.sub(r'## 📊 动态基线对比分析.*?(?=\n## |\Z)', '', filtered_content, flags=re.DOTALL)
-    
-    # 移除"AI战术指令"部分
-    filtered_content = re.sub(r'## 🤖 AI战术指令.*?(?=\n## |\Z)', '', filtered_content, flags=re.DOTALL)
-    
-    # 移除"指标变化分析"部分
-    filtered_content = re.sub(r'## 📊 指标变化分析.*?(?=\n## |\Z)', '', filtered_content, flags=re.DOTALL)
-    
-    # 移除多余的空行
-    filtered_content = re.sub(r'\n{3,}', '\n\n', filtered_content)
-    
-    return filtered_content.strip()
+    try:
+        # 要跳过的部分的标题列表
+        sections_to_skip = [
+            "## 🔍 产品提及分析",
+            "## 📊 动态基线对比分析",
+            "## 🤖 AI战术指令",
+            "## 📊 指标变化分析",
+            "## 📊 全面指标分析"
+        ]
+        
+        # 逐行处理报告内容
+        lines = report_content.splitlines()
+        filtered_lines = []
+        skip_section = False
+        
+        for line in lines:
+            # 检查是否是要跳过的部分的标题
+            if any(section in line for section in sections_to_skip):
+                skip_section = True
+            # 检查是否是下一个二级标题（表示当前要跳过的部分结束）
+            elif skip_section and line.startswith("## ") and not any(section in line for section in sections_to_skip):
+                skip_section = False
+                filtered_lines.append(line)  # 添加新的二级标题
+            # 只有不在跳过部分时才添加行
+            elif not skip_section:
+                filtered_lines.append(line)
+        
+        # 移除多余的空行
+        filtered_content = '\n'.join(filtered_lines)
+        # 使用正则表达式移除连续的空行
+        filtered_content = re.sub(r'\n{3,}', '\n\n', filtered_content)
+        
+        return filtered_content.strip()
+    except Exception as e:
+        # 如果处理失败，返回原始内容
+        print(f"过滤报告内容时出错: {str(e)}")
+        return report_content.strip()
 
 def format_warning_section(section_md):
     """
@@ -531,24 +566,25 @@ def create_historical_trend_chart(baseline_system):
                 seen_clean_names.add(clean_name)
                 unique_metrics.append(name)
         
-        # 使用固定的指标列表
+        # 使用固定的指标列表 - 基于最新报告字段
         fixed_metrics = [
             '消耗', '整体GMV', '整体ROI', '智能优惠劵金额', '退款金额', '整体GSV', '实际ROI', 
             '大瓶装订单数', '三瓶装订单数', '成交人数', '成交件数', '客单价', '直播间曝光次数', 
             '直播间曝光人数', '直播间进入人数', '直播间观看次数', '在线峰值', '平均在线', 
-            '引流成本', '转化成本', '整体uv价值', 'GPM', '人均观看时长', '观看人数', '曝光进入率', 
-            '商品曝光人数', '商品曝光率', '商品点击人数', '商品点击率', '点击转化率', '画面消耗', 
-            '画面gmv', '画面roi', '画面消耗占比', '画面CTR', '画面CVR', '画面曝光数', '画面点击数', 
-            '画面转化数', '视频消耗', '视频gmv', '视频roi', '视频消耗占比', '视频CTR', '视频CVR', 
-            '视频曝光数', '视频点击数', '视频转化数', '调控消耗', '调控GMV', '调控ROI', 
-            '调控成交订单数', '调控消耗占比'
+            '引流成本', '转化成本', '整体uv价值', 'GPM', '人均观看时长', '曝光进入率', 
+            '商品曝光人数', '商品-曝光率', '商品点击人数', '商品点击率', '点击转化率', 
+            '画面-消耗', '画面-gmv', '画面-roi', '画面-消耗占比', '画面-CTR', '画面-CVR', 
+            '画面-曝光数', '画面-点击数', '画面-转化数', 
+            '视频-消耗', '视频-gmv', '视频-roi', '视频-消耗占比', '视频-CTR', '视频-CVR', 
+            '视频-曝光数', '视频-点击数', '视频-转化数', 
+            '调控消耗', '调控GMV', '调控ROI', '调控成交订单数', '调控-消耗占比'
         ]
         
         # 筛选出在数据中实际存在的指标
         selectable_metrics = [metric for metric in fixed_metrics if metric in final_filtered_df.columns]
         
         # 设置默认选择
-        default = [m for m in ['整体GMV', '观看人数'] if m in selectable_metrics]
+        default = [m for m in ['整体GMV', '消耗'] if m in selectable_metrics]
         selected_metrics = st.multiselect("选择指标:", options=selectable_metrics, default=default)
 
         # --- 新增: 基线显示选项 ---
@@ -674,9 +710,7 @@ def main():
             # 构建命令 (已修改为绝对路径)
             analyzer_script_path = os.path.join(SCRIPT_DIR, 'src', 'ai_analysis', 'ai_analyzer.py')
             cmd = [
-                sys.executable, analyzer_script_path,
-                '--start_date', start_date_str,
-                '--end_date', end_date_str
+                sys.executable, analyzer_script_path
             ]
             if special_variables:
                 cmd.extend(['--variables', special_variables])
@@ -717,38 +751,46 @@ def main():
     # 选择日期以查看报告
     selected_date = st.sidebar.date_input("选择日期查看历史报告", date.today())
     
-    # 获取并显示报告列表
-    report_files = get_reports_by_date(selected_date)
-    
-    # 先完成报告选择流程
-    selected_report_path = None
-    if report_files:
-        report_options = {os.path.basename(f): f for f in report_files}
-        selected_report_name = st.sidebar.selectbox("选择一份报告查看详情:", list(report_options.keys()))
-        selected_report_path = report_options[selected_report_name]
-    else:
-        st.sidebar.info(f"未找到 {selected_date} 的分析报告。")
-        
-    # 然后在选择流程下方放置刷新按钮
+    # 处理刷新按钮点击事件 - 移到前面，确保能影响报告列表
     st.sidebar.markdown("---")
     refresh_clicked = st.sidebar.button("🔄 刷新报告列表", 
                                       help="点击此按钮重新扫描报告目录，获取最新生成的报告文件",
                                       use_container_width=True,
                                       type="primary")
         
-    # 处理刷新按钮点击事件
     if refresh_clicked:
         # 使用实验性API清除缓存，确保真正刷新
         try:
             st.cache_data.clear()
         except:
             pass
-        # 强制重新加载报告文件列表
-        report_files = get_reports_by_date(selected_date)
         # 使用更优雅的成功消息
         st.sidebar.success("✅ 报告列表已更新！", icon="✨")
-        # 移除不需要的提示
-        # st.sidebar.info("请重新选择一份报告查看详情")
+        # 强制页面重新运行以更新报告列表
+        st.rerun()
+    
+    # 获取并显示报告列表
+    report_files = get_reports_by_date(selected_date)
+    
+    # 先完成报告选择流程
+    selected_report_path = None
+    if report_files:
+        # 直接使用已经按时间排序的报告文件列表
+        report_options = [os.path.basename(f) for f in report_files]
+        report_paths = {os.path.basename(f): f for f in report_files}
+        
+        # 默认选择第一个报告（已经是最新的）
+        default_index = 0
+        
+        selected_report_name = st.sidebar.selectbox(
+            "选择一份报告查看详情:", 
+            report_options,
+            index=default_index,
+            help="💡 报告按时间倒序排列，最新的在顶部。带有13:00或14:00时间的报告包含话术分析数据"
+        )
+        selected_report_path = report_paths[selected_report_name]
+    else:
+        st.sidebar.info(f"未找到 {selected_date} 的分析报告。")
 
     if not selected_report_path:
         st.info("请在左侧选择一份报告进行查看。")
@@ -775,35 +817,31 @@ def main():
         query_data = {}
         # 指标名称映射：将报告中的指标名称映射到基线系统的标准名称（基于new_format_data.csv的列名）
         indicator_mapping = {
-            # 核心业务指标
-            '销售额': '整体GMV',
-            '广告GMV': '整体GMV',
-            '整体GMV': '整体GMV',
-            '观看人数': '直播间观看次数',
-            '直播间观看次数': '直播间观看次数',
-            '成交人数': '成交人数',
-            '成交人数_1': '成交人数',  # 处理带下划线的变体
+            # 核心业务指标 - 基于最新报告字段
             '消耗': '消耗',
+            '整体GMV': '整体GMV',
             '整体ROI': '整体ROI',
-            '广告ROI': '整体ROI',
+            '智能优惠劵金额': '智能优惠劵金额',
+            '退款金额': '退款金额',
+            '整体GSV': '整体GSV',
+            '实际ROI': '实际ROI',
+            '成交人数': '成交人数',
+            '成交件数': '成交件数',
             '客单价': '客单价',
-            '平均在线人数': '平均在线',
-            '平均在线': '平均在线',
-            '整体GPM': 'GPM',
-            'GPM': 'GPM',
             
             # 直播间相关指标
             '直播间曝光次数': '直播间曝光次数',
             '直播间曝光人数': '直播间曝光人数',
-            '直播间曝光人数_1': '直播间曝光人数',  # 处理带下划线的变体
             '直播间进入人数': '直播间进入人数',
+            '直播间观看次数': '直播间观看次数',
             '在线峰值': '在线峰值',
-            '人均观看时长': '人均观看时长',
-            
-            # 转化相关指标
+            '平均在线': '平均在线',
             '引流成本': '引流成本',
             '转化成本': '转化成本',
             '整体uv价值': '整体uv价值',
+            'GPM': 'GPM',
+            '人均观看时长': '人均观看时长',
+            '观看人数': '观看人数',
             '曝光进入率': '曝光进入率',
             
             # 商品相关指标
@@ -840,21 +878,17 @@ def main():
             '调控GMV': '调控GMV',
             '调控ROI': '调控ROI',
             '调控成交订单数': '调控成交订单数',
-            '调控-消耗占比': '调控-消耗占比',
-            
-            # 其他财务指标
-            '智能优惠劵金额': '智能优惠劵金额',
-            '退款金额': '退款金额',
-            '整体GSV': '整体GSV',
-            '实际ROI': '实际ROI',
-            '大瓶装订单数': '大瓶装订单数',
-            '三瓶装订单数': '三瓶装订单数',
-            '成交件数': '成交件数'
+            '调控-消耗占比': '调控-消耗占比'
         }
         
         # 从报告中提取的指标数据准备为查询格式
         for name, values in metrics_data.items():
             try:
+                # 添加类型检查，确保values是字典类型
+                if not isinstance(values, dict):
+                    print(f"⚠️ 跳过非字典类型的指标数据: {name} = {values} (类型: {type(values)})")
+                    continue
+                    
                 # 清理数值字符串
                 current_val_str = values.get('当前值', '0').replace(',', '').replace('¥', '').replace('%', '')
                 # 处理特殊值
@@ -867,7 +901,9 @@ def main():
                 query_data[mapped_name] = value
                 print(f"📊 指标映射: {name} -> {mapped_name} = {value}")
             except (ValueError, TypeError) as e:
-                print(f"⚠️ 跳过无效指标值: {name} = {values.get('当前值', 'N/A')} (错误: {e})")
+                # 改进错误处理，显示更多调试信息
+                values_info = values if isinstance(values, dict) else f"非字典类型: {type(values)}"
+                print(f"⚠️ 跳过无效指标值: {name} = {values_info} (错误: {e})")
                 continue
         
         try:
@@ -948,6 +984,11 @@ def main():
             def display_metric(metric_name: str):
                 metric_info = get_metric_data(metrics_data, metric_name)
                 if metric_info:
+                    # 添加类型检查，确保metric_info是字典类型
+                    if not isinstance(metric_info, dict):
+                        st.metric(label=metric_name, value="数据格式错误", delta=None, help=f"指标数据类型错误: {type(metric_info)}")
+                        return
+                        
                     val_str = metric_info.get('当前值', '0')
                     delta_str = metric_info.get('变化百分比', 'N/A')
 
@@ -991,9 +1032,9 @@ def main():
                 else:
                     st.metric(label=metric_name, value="N/A", delta=None, help=f"未找到指标: {metric_name}")
 
-            # 修正指标名称，使其与报告中的实际指标名称一致
-            key_metrics_row1 = ['视频-消耗占比', 'GPM', '点击转化率']
-            key_metrics_row2 = ['商品点击率', '整体GMV', '整体ROI']
+            # 修正指标名称，使其与最新报告中的实际指标名称一致
+            key_metrics_row1 = ['消耗', '整体GMV', '整体ROI']
+            key_metrics_row2 = ['成交人数', '商品点击人数', '视频-消耗']
             
             # 调试信息：检查关键指标是否存在
             all_key_metrics = key_metrics_row1 + key_metrics_row2
@@ -1028,7 +1069,7 @@ def main():
             
             # 选择三个重要的业务指标
             core_metrics = {}
-            core_metric_keys = ["观看人数", "商品曝光人数", "商品点击人数"]
+            core_metric_keys = ["消耗", "整体GMV", "成交人数"]
             
             # 提取指标数据，并尝试转换为数值类型
             for key in core_metric_keys:
@@ -1047,14 +1088,15 @@ def main():
             
             if core_metrics:
                 # 美化的指标卡片展示
-                metric_icons = {"观看人数": "👥", "商品曝光人数": "👁️", "商品点击人数": "🖱️"}
-                metric_colors = {"观看人数": "#FF6B6B", "商品曝光人数": "#4ECDC4", "商品点击人数": "#45B7D1"}
+                metric_icons = {"消耗": "💰", "整体GMV": "📈", "成交人数": "🛒"}
+                metric_colors = {"消耗": "#FF6B6B", "整体GMV": "#4ECDC4", "成交人数": "#45B7D1"}
                 
                 metric_cols = st.columns(len(core_metrics))
                 for i, (metric_name, original_value) in enumerate(core_metrics.items()):
                     with metric_cols[i]:
                         metric_info = get_metric_data(metrics_data, metric_name)
-                        delta_str = metric_info.get('变化百分比') if metric_info else None
+                        # 添加类型检查，确保metric_info是字典类型
+                        delta_str = metric_info.get('变化百分比') if metric_info and isinstance(metric_info, dict) else None
                         
                         # 格式化显示值
                         display_value_for_metric = original_value
@@ -1333,7 +1375,7 @@ def main():
                     
                     st.markdown('<div class="baseline-table-container">', unsafe_allow_html=True)
                     st.dataframe(
-                        baseline_df.style.format({'基线值': '{:.2f}'}).background_gradient(subset=['基线值']),
+                        baseline_df.style.format({'基线值': '{:.2f}'}),
                         use_container_width=True
                     )
                     st.markdown('</div>', unsafe_allow_html=True)
@@ -1630,8 +1672,9 @@ def main():
                             elif '动态详情' in details and '基线值' in details['动态详情']:
                                 baseline_value = details['动态详情']['基线值']
                             
-                            eval_method = details.get('评估方法', '传统评估')
-                            evaluation = details.get('评估', '未知')
+                            # 添加类型检查，确保details是字典类型
+                            eval_method = details.get('评估方法', '传统评估') if isinstance(details, dict) else '传统评估'
+                            evaluation = details.get('评估', '未知') if isinstance(details, dict) else '未知'
                             
                             # 美化的指标详情卡片
                             st.markdown(f'''
@@ -1702,8 +1745,9 @@ def main():
                             elif '动态详情' in details and '基线值' in details['动态详情']:
                                 baseline_value = details['动态详情']['基线值']
                             
-                            eval_method = details.get('评估方法', '传统评估')
-                            evaluation = details.get('评估', '未知')
+                            # 添加类型检查，确保details是字典类型
+                            eval_method = details.get('评估方法', '传统评估') if isinstance(details, dict) else '传统评估'
+                            evaluation = details.get('评估', '未知') if isinstance(details, dict) else '未知'
                             
                             # 美化的指标详情卡片
                             st.markdown(f'''
@@ -1810,6 +1854,97 @@ def main():
             </div>
             ''', unsafe_allow_html=True)
         else:
+            # 话术匹配分析结果展示
+            script_analysis_result = target_result.get('script_analysis_result')
+            if script_analysis_result:
+                st.markdown('''
+                <div class="script-analysis-header">
+                    <div class="analysis-icon">🎯</div>
+                    <div class="analysis-content">
+                        <h3>话术模板匹配分析</h3>
+                        <p>基于欧莱雅话术模板，分析主播实际话术覆盖情况</p>
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
+                
+                # 整体覆盖率展示
+                overall_coverage = script_analysis_result.get('overall_coverage', 0) * 100
+                coverage_color = "#4CAF50" if overall_coverage >= 70 else "#FF9800" if overall_coverage >= 40 else "#F44336"
+                coverage_status = "优秀" if overall_coverage >= 70 else "良好" if overall_coverage >= 40 else "需改进"
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown(f'''
+                    <div class="script-metric-card">
+                        <div class="metric-icon">📊</div>
+                        <div class="metric-content">
+                            <div class="metric-value" style="color: {coverage_color}">{overall_coverage:.1f}%</div>
+                            <div class="metric-label">整体覆盖率</div>
+                            <div class="metric-status">{coverage_status}</div>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                
+                with col2:
+                    covered_count = len(script_analysis_result.get('covered_scenarios', []))
+                    total_scenarios = len(script_analysis_result.get('detailed_analysis', {}))
+                    st.markdown(f'''
+                    <div class="script-metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div class="metric-content">
+                            <div class="metric-value">{covered_count}/{total_scenarios}</div>
+                            <div class="metric-label">覆盖场景</div>
+                            <div class="metric-status">已覆盖场景数</div>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                
+                with col3:
+                    missing_count = len(script_analysis_result.get('missing_scenarios', []))
+                    st.markdown(f'''
+                    <div class="script-metric-card">
+                        <div class="metric-icon">⚠️</div>
+                        <div class="metric-content">
+                            <div class="metric-value">{missing_count}</div>
+                            <div class="metric-label">缺失场景</div>
+                            <div class="metric-status">需要补充</div>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                
+                # 详细场景分析
+                with st.expander("📋 查看详细场景分析", expanded=False):
+                    detailed_analysis = script_analysis_result.get('detailed_analysis', {})
+                    if detailed_analysis:
+                        for scenario, details in detailed_analysis.items():
+                            coverage_pct = details.get('coverage_score', 0) * 100
+                            status_icon = "✅" if coverage_pct >= 30 else "⚠️" if coverage_pct >= 10 else "❌"
+                            
+                            st.markdown(f'''
+                            <div class="scenario-analysis-card">
+                                <div class="scenario-header">
+                                    <span class="scenario-icon">{status_icon}</span>
+                                    <span class="scenario-name">{scenario}</span>
+                                    <span class="scenario-coverage">{coverage_pct:.1f}%</span>
+                                </div>
+                                <div class="scenario-details">
+                                    <p><strong>匹配关键词:</strong> {', '.join(details.get('matched_keywords', [])[:5]) if details.get('matched_keywords') else '无'}</p>
+                                    {'<p><strong>缺失关键词:</strong> ' + ', '.join(details.get('missing_keywords', [])[:3]) + '</p>' if details.get('missing_keywords') else ''}
+                                </div>
+                            </div>
+                            ''', unsafe_allow_html=True)
+                    else:
+                        st.info("暂无详细场景分析数据")
+                
+                # 优化建议
+                recommendations = script_analysis_result.get('recommendations', [])
+                if recommendations:
+                    st.markdown("### 💡 话术优化建议")
+                    for i, rec in enumerate(recommendations, 1):
+                        st.markdown(f"{i}. {rec}")
+                
+                st.markdown("---")
+            
             # 修复：从正确的字段读取AI战术指令
             recommended_strategies = target_result.get('ai_tactical_instructions', [])
             if not recommended_strategies:
@@ -1910,6 +2045,11 @@ def main():
                 # 显示完整的指标变化分析表
                 table_data = []
                 for metric_name, metric_info in metrics_data.items():
+                    # 添加类型检查，确保metric_info是字典类型
+                    if not isinstance(metric_info, dict):
+                        print(f"⚠️ 跳过非字典类型的指标数据: {metric_name} = {metric_info} (类型: {type(metric_info)})")
+                        continue
+                        
                     current_val = metric_info.get('当前值', 'N/A')
                     previous_val = metric_info.get('上小时值', 'N/A')
                     change_pct = metric_info.get('变化百分比', 'N/A')

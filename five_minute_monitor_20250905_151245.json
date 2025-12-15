@@ -1,0 +1,91 @@
+{
+  "monitor_time": "2025-09-05 15:12:44",
+  "time_window": "最近5分钟",
+  "total_transcripts": 99,
+  "keyword_detection": {
+    "chat_count": 11,
+    "instances": [
+      {
+        "timestamp": "2025-09-05 15:08:49",
+        "text": "的游戏啊都给大家做了一个升级",
+        "keyword": "游戏",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:09:22",
+        "text": "会在小舞台带大家做游戏带小",
+        "keyword": "游戏",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:09:25",
+        "text": "然做游戏您只需要拿着您的手机在旁边猛",
+        "keyword": "游戏",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:10:10",
+        "text": "嗯游戏舞蹈律动活动也好",
+        "keyword": "游戏",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:10:37",
+        "text": "您带小朋友周末去商场去遛遛玩去商",
+        "keyword": "周末",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:10:46",
+        "text": "电子游戏也得几大百块钱了您在在😊",
+        "keyword": "游戏",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:10:49",
+        "text": "不你说带小同学看个电影两个小时也",
+        "keyword": "电影",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:11:28",
+        "text": "还有我们的定位手环家上朋友们随便找到两人沙发",
+        "keyword": "随便",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:11:52",
+        "text": "明日来还是周末来呢老子",
+        "keyword": "周末",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:11:55",
+        "text": "您是平日来还是周末来或说你搜",
+        "keyword": "周末",
+        "type": "keyword_match"
+      },
+      {
+        "timestamp": "2025-09-05 15:12:01",
+        "text": "周末来打开您的手机地图搜一下那",
+        "keyword": "周末",
+        "type": "keyword_match"
+      }
+    ]
+  },
+  "ai_analysis": {
+    "is_off_topic": false,
+    "risk_level": "low",
+    "confidence_score": 0.95,
+    "detected_keywords": [],
+    "off_topic_content": "",
+    "duration_estimate": "0",
+    "recommendation": ""
+  },
+  "alert_trigger": {
+    "should_alert": false,
+    "alert_level": "",
+    "alert_message": ""
+  },
+  "alert_level": "medium"
+}

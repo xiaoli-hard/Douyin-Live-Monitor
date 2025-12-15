@@ -6,6 +6,28 @@ import json
 import logging
 from typing import Optional
 from openai import OpenAI
+from src.ai_analysis.script_matching_analyzer import ScriptMatchingAnalyzer
+
+# 添加这部分代码
+def clean_emojis_for_storage(text: str) -> str:
+    """清理文本中的 emoji 字符，保留中文和正常标点"""
+    if not text:
+        return text
+    import re
+    # 使用更精确的emoji范围，避免误删中文字符
+    emoji_pattern = re.compile(
+        r'['
+        r'\U0001F600-\U0001F64F'   # 表情符号
+        r'\U0001F300-\U0001F5FF'   # 符号和图标
+        r'\U0001F680-\U0001F6FF'   # 运输和地图符号
+        r'\U0001F1E0-\U0001F1FF'   # 国旗
+        r'\U0001F900-\U0001F9FF'   # 补充符号
+        r'\U00002600-\U000026FF'   # 杂项符号
+        r'\U00002700-\U000027BF'   # 装饰符号
+        r']+',
+        flags=re.UNICODE
+    )
+    return emoji_pattern.sub('', text)
 
 # 配置日志 - 避免重复添加处理器
 logger = logging.getLogger(__name__)
@@ -27,6 +49,9 @@ class DataAnalyzer:
         # --- 所有路径都基于 root_dir 构建 ---
         self.data_storage_path = os.path.join(self.root_dir, config['data_storage']['file_path'])
         self.hourly_log_path = os.path.join(self.root_dir, 'data', 'storage', 'hourly_data_log.json')
+        
+        # 初始化话术匹配分析器
+        self.script_analyzer = ScriptMatchingAnalyzer(self.root_dir)
         self.strategy_library_path = os.path.join(self.root_dir, 'src', 'ai_analysis', 'strategy_library.json')
         self.speech_data_path = os.path.join(self.root_dir, config.get('speech_data', {}).get('file_path', 'text/latest_two_cleaned.json'))
         
@@ -77,27 +102,31 @@ class DataAnalyzer:
 
         # 构建完整的Prompt，要求AI同时提供诊断和具体战术指令
         prompt = f"""
-        你是一位顶级的直播数据分析师和销售策略专家。请对比以下当前小时和上一小时的数据，以及当前小时的主播话术。
-        你的任务是找出核心问题并提供具体的战术指令来改善问题。
+        你是一位专业的欧莱雅洗发水直播销售分析师和护发产品营销专家。请对比以下当前小时和上一小时的数据，以及当前小时的主播话术。
+        你的任务是找出核心问题并提供具体的欧莱雅洗发水营销战术指令来改善问题。
 
-        **重要规则：必须提供至少一条战术指令。如果数据表现平稳或优秀，请提供一条"维持优势"或"锦上添花"的鼓励性指令。**
+        **重要规则：必须提供至少一条针对欧莱雅洗发水产品的战术指令。如果数据表现平稳或优秀，请提供一条"维持优势"或"锦上添花"的鼓励性指令。**
+        
+        **产品背景：【滋养修复发质】欧莱雅洗发水护发柔顺洗发露润养秀发发质洗发乳**
         
         {variables_prompt_part}
         当前数据: {json.dumps(current_pure_data, ensure_ascii=False)}
         历史数据: {json.dumps(previous_pure_data, ensure_ascii=False)}
         话术内容: {speech_content}
         
-        首先诊断问题，找出以下常见问题中存在的1-3个核心问题。如果一切正常，请诊断为“数据表现平稳”。
-        - 转化率下降/转化率低
-        - 互动率低/评论少/点赞少/场子冷
-        - 客单价低/大件转化不足/价值塑造不足
-        - 用户犹豫/临门一脚
+        首先诊断问题，找出以下欧莱雅洗发水直播常见问题中存在的1-3个核心问题。如果一切正常，请诊断为"数据表现平稳"。
+        - 产品功效说明不够专业/缺乏护发知识分享
+        - 发质问题针对性不强/客群定位模糊
+        - 产品体验感不足/缺乏使用效果展示
+        - 品牌专业度体现不够/信任感建立不足
+        - 价格敏感度高/价值塑造不充分
+        - 互动引导缺乏针对性/发质测试环节缺失
         - 数据表现平稳
         
-        然后，对每个问题生成一个具体的战术指令，包括:
-        1. 战术名称：简短有力的标题
-        2. 目标：这个战术想要达成的效果
-        3. 具体指令：详细的执行方法，包括话术示例
+        然后，对每个问题生成一个具体的欧莱雅洗发水营销战术指令，包括:
+        1. 战术名称：简短有力的标题（如：专业护发知识分享、发质测试互动、产品体验展示等）
+        2. 目标：这个战术想要达成的效果（提升品牌专业度、增强产品信任感、精准客群定位等）
+        3. 具体指令：详细的执行方法，包括欧莱雅洗发水相关的话术示例（如："这款欧莱雅洗发水含有滋养修复成分..."、"针对您的发质问题，我推荐..."等）
         
         请严格按照以下JSON格式返回，不要包含任何其他解释或文本:
         {{
@@ -121,8 +150,55 @@ class DataAnalyzer:
             )
             ai_response_content = response.choices[0].message.content
             logger.info(f"成功从AI获取到响应: {ai_response_content}")
-            # 确保返回的是JSON格式
-            return json.loads(ai_response_content)
+            
+            # 直接解析AI响应，不进行额外的字符串清理
+            # 因为过度的正则表达式清理可能会破坏JSON结构
+            try:
+                return json.loads(ai_response_content)
+            except json.JSONDecodeError as json_error:
+                logger.warning(f"JSON解析失败，尝试清理特殊标记: {json_error}")
+                # 清理豆包API可能返回的特殊标记和多余内容
+                cleaned_content = ai_response_content.strip()
+                
+                # 移除可能的markdown代码块标记
+                if cleaned_content.startswith('```json'):
+                    cleaned_content = cleaned_content[7:]
+                if cleaned_content.endswith('```'):
+                    cleaned_content = cleaned_content[:-3]
+                
+                # 移除豆包API的特殊标记（如 <[PLHD30_never_used_xxx]>）
+                import re
+                cleaned_content = re.sub(r'<\[PLHD30_never_used_[^>]+\]>', '', cleaned_content)
+                
+                # 移除多余的JSON对象和注释文字
+                # 查找第一个完整的JSON对象
+                brace_count = 0
+                json_start = -1
+                json_end = -1
+                
+                for i, char in enumerate(cleaned_content):
+                    if char == '{' and json_start == -1:
+                        json_start = i
+                        brace_count = 1
+                    elif json_start != -1:
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                json_end = i + 1
+                                break
+                
+                if json_start >= 0 and json_end > json_start:
+                    cleaned_content = cleaned_content[json_start:json_end]
+                
+                # 额外处理：移除可能的中文注释和说明文字
+                cleaned_content = re.sub(r'（注：[^）]*）', '', cleaned_content)
+                cleaned_content = re.sub(r'\s*,\s*"diagnoses".*$', '', cleaned_content, flags=re.DOTALL)
+                
+                cleaned_content = cleaned_content.strip()
+                logger.info(f"清理后的JSON内容: {cleaned_content[:200]}...")
+                return json.loads(cleaned_content)
         except Exception as e:
             logger.error(f"从AI获取诊断和战术指令失败: {e}", exc_info=True)
             # 在API失败时返回一个包含错误信息的默认结果
@@ -153,6 +229,7 @@ class DataAnalyzer:
 
     def load_speech_data(self):
         """加载主播话术数据"""
+        logger.info(f"开始加载主播话术数据从: {self.speech_data_path}")
         try:
             if not os.path.exists(self.speech_data_path):
                 logger.warning(f"主播话术数据文件不存在: {self.speech_data_path}")
@@ -160,12 +237,19 @@ class DataAnalyzer:
 
             with open(self.speech_data_path, 'r', encoding='utf-8') as f:
                 speech_data = json.load(f)
-                if not isinstance(speech_data, list):
-                    logger.warning("主播话术数据格式应为数组，已转换为单元素数组")
-                    speech_data = [speech_data]
-                return speech_data
+            
+            logger.info(f"成功从JSON文件加载数据。")
+            if not isinstance(speech_data, list):
+                logger.warning("主播话术数据格式应为数组，已转换为单元素数组")
+                speech_data = [speech_data]
+            
+            logger.info(f"数据加载完成，共 {len(speech_data)} 条记录。")
+            return speech_data
+        except json.JSONDecodeError as e:
+            logger.error(f"加载主播话术数据失败: JSON解析错误 - {str(e)}", exc_info=True)
+            return []
         except Exception as e:
-            logger.error(f"加载主播话术数据失败: {str(e)}")
+            logger.error(f"加载主播话术数据失败: {str(e)}", exc_info=True)
             return []
 
     def find_matching_speech(self, date_str, time_range):
@@ -193,7 +277,7 @@ class DataAnalyzer:
     def load_data_from_csv(self):
         """从 new_format_data.csv 文件中读取最后两行数据（修复：直接从文件读取真正的最后两行）"""
         try:
-            csv_path = os.path.join(self.root_dir, 'data', 'baseline_data', 'new_format_data.csv')
+            csv_path = os.path.join(self.root_dir, 'data', 'baseline_data', '欧莱雅数据登记 - 自动化数据 (4).csv')
             if not os.path.exists(csv_path):
                 logger.warning(f"CSV文件不存在: {csv_path}")
                 return None, None
@@ -258,31 +342,41 @@ class DataAnalyzer:
             return None, None
     
     def load_speech_from_json(self, target_date, target_hour):
-        """从 latest_two_cleaned.json 中根据日期和小时匹配话术内容"""
+        """直接从转录JSON文件中读取话术内容"""
         try:
-            json_path = os.path.join(self.root_dir, 'text', 'latest_two_cleaned.json')
+            # 将日期格式转换为文件名格式 (2025-08-28 -> 2025-08-28)
+            # 将小时格式转换为文件名格式 (22:00-23:00 -> 22)
+            hour_num = target_hour.split(':')[0] if ':' in target_hour else target_hour.split('-')[0].replace('点', '').strip()
+            
+            # 构建JSON文件路径
+            json_filename = f"transcripts_JSON_实时_{target_date}_{hour_num.zfill(2)}.json"
+            json_path = os.path.join(self.root_dir, 'text', json_filename)
+            
+            logger.info(f"正在查找话术文件: {json_path}")
+            
             if not os.path.exists(json_path):
                 logger.warning(f"话术JSON文件不存在: {json_path}")
                 return ""
             
+            # 读取JSON文件内容
             with open(json_path, 'r', encoding='utf-8') as f:
-                speech_data = json.load(f)
+                transcript_data = json.load(f)
             
-            # 确保数据是列表格式
-            if not isinstance(speech_data, list):
-                speech_data = [speech_data] if speech_data else []
+            if not isinstance(transcript_data, list):
+                logger.warning(f"话术文件格式不正确: {json_path}")
+                return ""
             
-            # 查找匹配的话术内容
-            for entry in speech_data:
-                entry_date = entry.get('日期', '')
-                entry_hour = entry.get('小时', '')
-                
-                # 标准化时间格式进行匹配
-                if entry_date == target_date and entry_hour == target_hour:
-                    return entry.get('text', '')
+            # 合并所有话术文本
+            speech_texts = []
+            for entry in transcript_data:
+                text = entry.get('text', '')
+                if text and text.strip():
+                    speech_texts.append(text.strip())
             
-            logger.info(f"未找到匹配的话术数据: {target_date} {target_hour}")
-            return ""
+            combined_speech = ' '.join(speech_texts)
+            logger.info(f"成功读取话术内容，总长度: {len(combined_speech)} 字符")
+            
+            return combined_speech
             
         except Exception as e:
             logger.error(f"从JSON文件读取话术失败: {e}", exc_info=True)
@@ -328,7 +422,7 @@ class DataAnalyzer:
             current_time=current_time
         )
         
-        # 调用豆包API进行分析
+        # 调用豆包AI进行分析
         response = self.client.chat.completions.create(
             model=self.config['douban_api']['model_name'],
             messages=[{"role": "user", "content": prompt}]
@@ -431,15 +525,17 @@ class DataAnalyzer:
    - 仅当指标下降幅度超过{threshold_percent}%时，才能标记为🔴异常
    - 特别注意：上涨的指标绝对不能标记为异常，即使上涨幅度很大
 
-3. 【产品提及分析】
-   - 提取所有提及的产品名称及提及次数，特别关注'PWU洗衣留香珠'、'留香珠'、'洗衣珠'等关键产品
-   - 分析各产品关联的情感倾向（正面/中性/负面）
-   - 关联产品提及与销售转化的关系
+3. 【欧莱雅洗发水产品分析】
+   - 重点关注【滋养修复发质】欧莱雅洗发水护发柔顺洗发露润养秀发发质洗发乳的提及情况
+   - 分析产品核心卖点提及：滋养修复、护发柔顺、润养秀发等关键词频次
+   - 评估产品功效话术效果：发质改善、柔顺效果、滋养成分等描述的转化影响
+   - 识别目标客群话术：针对受损发质、干燥发质、追求柔顺效果用户的话术策略
 
-4. 【话术深度分析】
-   - 提取关键销售话术（促销策略/产品卖点/互动引导）
-   - 量化分析话术特征（基于提供的【关键词统计】和【情感分析】结果）
-   - 建立话术与指标关联性（如："限时优惠"话术与转化率关系）
+4. 【洗发护发话术深度分析】
+   - 提取关键销售话术：产品功效介绍、使用方法指导、效果对比展示
+   - 分析专业护发术语使用：氨基酸、蛋白质修复、深层滋养等专业词汇效果
+   - 评估互动引导策略：发质测试、使用体验分享、前后对比等互动方式
+   - 建立话术与指标关联性：功效强调与转化率、专业度与客单价关系
 
 5. 【根因诊断】结合数据与话术提供3-5个可能原因，每个原因需包含：
    - 具体数据证据（指标变化值）
@@ -458,11 +554,13 @@ class DataAnalyzer:
 {indicator_table_rows}
 > **状态说明**：🔴 异常（下降超过{threshold_percent}%） | 🟢 正常（上涨或下降不足{threshold_percent}%）
 
-## 🔍 产品提及分析
-| 产品名称 | 提及次数 | 情感倾向 | 相关指标变化 |
-|----------|----------|----------|------------|
-| PWU洗衣留香珠 | 12     | 正面     | 转化率+2.5% |
-| ...      | ...      | ...      | ...        |
+## 🔍 欧莱雅洗发水产品分析
+| 关键词类型 | 具体内容 | 提及次数 | 转化效果 |
+|------------|----------|----------|----------|
+| 产品全称 | 欧莱雅洗发水/护发柔顺洗发露 | [次数] | [转化率变化] |
+| 核心功效 | 滋养修复/护发柔顺/润养秀发 | [次数] | [客单价影响] |
+| 目标发质 | 受损发质/干燥发质/毛躁发质 | [次数] | [成交人数变化] |
+| 专业术语 | 氨基酸/蛋白质修复/深层滋养 | [次数] | [观看时长影响] |
 
 ## ⚠️ 异常指标预警
 请严格按照下面的嵌套列表格式输出，使用4个空格进行缩进创建子列表:
@@ -471,10 +569,12 @@ class DataAnalyzer:
     - **数据证据**: [引用的具体数据]
     - **话术证据**: [引用的相关话术]
 
-## 💡 优化建议
-1. **数据验证**: 检查[具体指标]数据采集逻辑，确保准确性
-2. **话术优化**: 将[当前话术问题]调整为[建议话术示例]（预计提升[预期效果]）
-3. **效果跟踪**: 通过对比[验证指标]在下一个小时内的变化验证优化效果
+## 💡 欧莱雅洗发水营销优化建议
+1. **产品展示优化**: 加强发质对比展示，突出滋养修复效果的可视化呈现
+2. **话术策略调整**: 增加专业护发知识分享，提升品牌专业度和用户信任感
+3. **互动引导强化**: 设计发质测试环节，让用户参与产品适配性判断
+4. **功效强调重点**: 重点突出"滋养修复"、"护发柔顺"等核心卖点的具体效果
+5. **客群精准定位**: 针对不同发质问题（干燥、受损、毛躁）提供个性化解决方案
 
 > **分析周期**：{current_time_str} | **数据来源**：飞书表格"""
         
@@ -489,14 +589,13 @@ class DataAnalyzer:
             return f"# AI分析错误\n\n在生成详细分析报告时发生错误：{e}"
 
 
-    def process_hourly_analysis(self, special_variables: Optional[str] = None) -> dict:
-        """
-        重构后的核心方法，处理每小时数据分析流程。
-        从CSV文件读取数据，从JSON文件匹配话术内容。
-        返回一个包含结构化数据和Markdown报告的字典。
-        """
+    def process_hourly_analysis(self, special_variables: Optional[str] = None):
+        """处理小时级分析，包含错误处理和结构化结果返回"""
         try:
-            # 从CSV文件读取最后两行数据
+            # 如果没有传入special_variables，设置为空字符串
+            if special_variables is None:
+                special_variables = ""
+            
             current_data, previous_data = self.load_data_from_csv()
             
             if not current_data:
@@ -553,6 +652,32 @@ class DataAnalyzer:
                 'speech_content': previous_speech_content
             }
 
+            # 话术匹配分析
+            script_analysis_result = None
+            script_analysis_md = ""
+            logger.info(f"检查话术内容: {'有内容' if current_speech_content else '无内容'}")
+            if current_speech_content:
+                try:
+                    # 添加详细日志，记录传入话术分析器的内容
+                    logger.info(f"准备进行话术匹配分析，传入内容长度: {len(current_speech_content)}")
+                    logger.debug(f"传入话术内容 (前100字符): {current_speech_content[:100]}")
+
+                    script_analysis_result = self.script_analyzer.analyze_script_coverage(current_speech_content)
+                    
+                    # 添加日志，记录覆盖率分析结果
+                    logger.info(f"话术覆盖率分析完成: {json.dumps(script_analysis_result, ensure_ascii=False)}")
+
+                    script_analysis_md = self.script_analyzer.generate_script_matching_report(current_speech_content, current_data)
+                    
+                    logger.info(f"话术匹配分析报告生成完毕，整体覆盖率: {script_analysis_result['overall_coverage']*100:.1f}%")
+
+                except Exception as e:
+                    # 使用 exc_info=True 记录完整的堆栈跟踪
+                    logger.error(f"话术匹配分析过程中发生严重错误: {e}", exc_info=True)
+                    script_analysis_md = "\n\n## 🎯 话术模板匹配分析\n\n❌ 话术分析功能暂时不可用 (内部错误)\n\n"
+            else:
+                script_analysis_md = "\n\n## 🎯 话术模板匹配分析\n\n⚠️ 本小时无话术内容记录\n\n"
+
             # 关键改动：首先生成详细的分析报告
             detailed_report_md = self._generate_detailed_report_with_ai(current_entry, previous_entry, current_speech_content)
 
@@ -561,7 +686,7 @@ class DataAnalyzer:
 
             # 初始化基线引擎
             baseline_engine = RealDataDynamicBaseline(data_dir=os.path.join(self.root_dir, 'data'))
-            baseline_data_path = os.path.join(self.root_dir, 'data', 'baseline_data', 'new_format_data.csv')
+            baseline_data_path = os.path.join(self.root_dir, 'data', 'baseline_data', '欧莱雅数据登记 - 自动化数据 (4).csv')
             if not baseline_engine.is_initialized:
                 baseline_engine.initialize_system(baseline_data_path)
 
@@ -600,8 +725,9 @@ class DataAnalyzer:
                     
                     baseline_md += f"| {indicator} | {result['评估']} | {result['系数']} | {baseline_value} | {result['评估方法']} |\n"
 
-            # 将基线分析添加到报告
+            # 将基线分析和话术分析添加到报告
             detailed_report_md += baseline_md
+            detailed_report_md += script_analysis_md
 
             # 1. (诊断) 调用AI获取结构化的诊断关键词和战术指令
             diagnosis_result = self._get_diagnosis_from_ai(current_entry, previous_entry, current_speech_content, special_variables)
@@ -618,9 +744,25 @@ class DataAnalyzer:
                     "**[AI指令]** 主播及场控请注意，请立即执行以下操作：\n"
                 ]
                 for i, strategy in enumerate(matched_strategies, 1):
+                    # 添加调试日志
+                    logger.info(f"处理策略 {i}: {strategy}")
+                    
+                    # 添加以下几行代码，清理策略中的emoji
+                    raw_name = strategy.get('name', '')
+                    raw_goal = strategy.get('goal', '')
+                    raw_instruction = strategy.get('instruction', '')
+                    
+                    logger.info(f"原始数据 - name: '{raw_name}', goal: '{raw_goal}', instruction: '{raw_instruction[:100]}...'")
+                    
+                    clean_name = clean_emojis_for_storage(raw_name)
+                    clean_goal = clean_emojis_for_storage(raw_goal)
+                    clean_instruction = clean_emojis_for_storage(raw_instruction)
+                    
+                    logger.info(f"清理后数据 - name: '{clean_name}', goal: '{clean_goal}', instruction: '{clean_instruction[:100]}...'")
+                    
                     instructions_md_parts.append(
-                        f"\n**{i}. {strategy['name']} (目标: {strategy['goal']})**\n"
-                        f"   - **指令详情**: {strategy['instruction']}\n"
+                        f"\n**{i}. {clean_name} (目标: {clean_goal})**\n"
+                        f"   - **指令详情**: {clean_instruction}\n"
                     )
                 final_report_md += "".join(instructions_md_parts)
 
@@ -629,19 +771,43 @@ class DataAnalyzer:
                 "diagnoses": diagnoses_keywords,
                 "recommended_strategy_ids": [s.get('id') for s in matched_strategies], # 返回策略ID
                 "recommended_strategies": matched_strategies, # 保存完整的战术指令
+                "script_analysis": script_analysis_result,  # 添加话术分析结果
                 "report_markdown": final_report_md
             }
         
         except Exception as e:
             logger.error(f"处理小时级分析时发生未知错误: {e}", exc_info=True)
+            # 修复：使用clean_emojis_for_storage函数清理错误消息中的emoji字符
+            error_message = clean_emojis_for_storage(str(e))
             return {
                 "timestamp": datetime.datetime.now().isoformat(),
                 "diagnoses": ["Error"],
                 "recommended_strategies": [],
-                "report_markdown": f"# 分析流程错误\n\n处理数据时发生严重错误: {e}"
+                "report_markdown": f"# 分析流程错误\n\n处理数据时发生严重错误: {error_message}"
             }
 
 
+# 在文件顶部，import语句之后添加辅助函数
+import re
+
+# def clean_emojis_for_storage(text):
+#     """清理文本中的emoji字符，避免在存储和处理时出现编码问题"""
+#     if not text:
+#         return text
+#     # 使用正则表达式移除emoji字符
+#     emoji_pattern = re.compile("[" 
+#         u"\U0001F600-\U0001F64F"  # 表情符号
+#         u"\U0001F300-\U0001F5FF"  # 符号和图标
+#         u"\U0001F680-\U0001F6FF"  # 运输和地图符号
+#         u"\U0001F1E0-\U0001F1FF"  # 国旗
+#         u"\U00002702-\U000027B0"  # 各种符号
+#         u"\U000024C2-\U0001F251"  # 各种符号
+#         ""]+", flags=re.UNICODE)
+#     return emoji_pattern.sub(r'', text)
+
+
+
+# 从实例方法改为普通函数，移除self参数
 def save_analysis_result(analysis_output: dict, root_dir: str):
     """
     保存分析结果为Markdown报告。
@@ -664,13 +830,14 @@ def save_analysis_result(analysis_output: dict, root_dir: str):
     file_path = os.path.join(reports_dir, file_name)
 
     try:
+        # 确保使用UTF-8编码保存
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(report_content)
         logger.info(f"分析报告已成功保存至: {file_path}")
     except IOError as e:
         logger.error(f"保存报告失败: {e}")
         raise
-
+    
     # 此外，也将结构化数据保存到JSON文件中
     results_path = os.path.join(root_dir, 'data', 'results', 'analysis_results.json')
     try:
@@ -684,11 +851,11 @@ def save_analysis_result(analysis_output: dict, root_dir: str):
                 except json.JSONDecodeError:
                     all_results = []
         
-        # 创建一个仅包含推荐策略的简洁条目
+        # 创建一个仅包含推荐策略的简洁条目，清理diagnoses中的emoji
         structured_entry = {
             "timestamp": datetime.datetime.now().isoformat(),
             "report_file": file_name,
-            "diagnoses": analysis_output.get("diagnoses", []),
+            "diagnoses": [clean_emojis_for_storage(d) for d in analysis_output.get("diagnoses", [])],
             "recommended_strategies": analysis_output.get("recommended_strategies", [])
         }
         all_results.append(structured_entry)

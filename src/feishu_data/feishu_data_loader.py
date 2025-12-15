@@ -76,7 +76,7 @@ def load_feishu_data(file_path='data/raw/feishu_sheet_data.json', target_date: O
                 return None, None
         
         # 验证必要字段并处理每个条目
-        required_fields = ['整体GMV', '观看人数', '点击转化率', '客单价', '小时']
+        required_fields = ['整体GMV', '消耗', '点击转化率', '客单价', '小时']
         valid_entries = []
         
         for entry in data:
@@ -88,27 +88,52 @@ def load_feishu_data(file_path='data/raw/feishu_sheet_data.json', target_date: O
             
             # 映射并转换数据类型
             try:
+                # 辅助函数：安全转换为float
+                def safe_float(value):
+                    if value == '' or value is None:
+                        return 0
+                    try:
+                        return float(value)
+                    except (ValueError, TypeError):
+                        return 0
+                
+                # 辅助函数：安全转换为int
+                def safe_int(value):
+                    if value == '' or value is None:
+                        return 0
+                    try:
+                        return int(float(value))
+                    except (ValueError, TypeError):
+                        return 0
+                
                 mapped_entry = {
-                                "整体GMV": float(entry['整体GMV']) if isinstance(entry['整体GMV'], (int, float, str)) else 0,
-                    "观看人数": int(float(entry['观看人数'])) if isinstance(entry['观看人数'], (int, float, str)) else 0,
-                    "转化率": round(float(entry['点击转化率'].strip('%')) / 100, 4) if isinstance(entry['点击转化率'], str) and entry['点击转化率'].endswith('%') else round(float(entry['点击转化率']), 4) if isinstance(entry['点击转化率'], (int, float, str)) else 0,
-                    "客单价": float(entry['客单价']) if isinstance(entry['客单价'], (int, float, str)) else 0
+                    "整体GMV": safe_float(entry['整体GMV']),
+                    "消耗": safe_float(entry['消耗']),
+                    "转化率": round(safe_float(entry['点击转化率'].strip('%')) / 100, 4) if isinstance(entry['点击转化率'], str) and entry['点击转化率'].endswith('%') and entry['点击转化率'].strip('%') != '' else round(safe_float(entry['点击转化率']), 4),
+                    "客单价": safe_float(entry['客单价'])
                 }
                 
                 # 添加所有其他字段
                 for key, value in entry.items():
                     # 跳过已处理的核心字段和datetime
-                    if key in ['整体GMV', '直播间观看人数', '转化率', '客单价', '主播优化建议', 'datetime']:
+                    if key in ['整体GMV', '消耗', '转化率', '客单价', '主播优化建议', 'datetime']:
                         continue
                     
                     # 处理数值型字段
                     if isinstance(value, (int, float)):
                         mapped_entry[key] = value
                     elif isinstance(value, str):
+                        # 处理空字符串
+                        if value == '':
+                            mapped_entry[key] = 0
                         # 处理百分比
-                        if value.endswith('%'):
+                        elif value.endswith('%'):
                             try:
-                                mapped_entry[key] = round(float(value.strip('%')) / 100, 4)
+                                percent_value = value.strip('%')
+                                if percent_value == '':
+                                    mapped_entry[key] = 0
+                                else:
+                                    mapped_entry[key] = round(float(percent_value) / 100, 4)
                             except ValueError:
                                 mapped_entry[key] = value  # 保留原始值以防转换失败
                         # 处理数值字符串
@@ -157,13 +182,12 @@ def load_feishu_data(file_path='data/raw/feishu_sheet_data.json', target_date: O
 
 # 字段映射：JSON键 -> CSV列名
 FIELD_MAPPING = {
-    "直播间曝光人数_1": "直播间曝光人数.1",
-    "成交人数_1": "成交人数.1",
-    "直播间曝光人数_2": "直播间曝光人数.2"
+    "直播间曝光人数_1": "直播间曝光人数",
+    "成交人数_1": "成交人数",
     # 可根据实际需要添加更多字段映射
 }
 
-def append_to_csv(data_entry, data_append_enabled, csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'baseline_data', 'new_format_data.csv')):
+def append_to_csv(data_entry, data_append_enabled, csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data', 'baseline_data', '欧莱雅数据登记 - 自动化数据 (4).csv')):
     """将处理后的数据追加到CSV文件"""
     try:
         # 确保目录存在
@@ -180,6 +204,7 @@ def append_to_csv(data_entry, data_append_enabled, csv_path=os.path.join(os.path
         
         # 读取CSV表头以确定字段顺序
         fieldnames = []
+        duplicate_found = False
         if file_exists:
             with open(csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
@@ -192,20 +217,40 @@ def append_to_csv(data_entry, data_append_enabled, csv_path=os.path.join(os.path
                         if (row.get('日期') == mapped_data.get('日期') and 
                             row.get('小时') == mapped_data.get('小时')):
                             logger.debug(f"记录已存在，跳过写入: {mapped_data['日期']} {mapped_data['小时']}")
-                            return True
+                            duplicate_found = True
+                            break
+            
+            # 如果发现重复记录，直接返回
+            if duplicate_found:
+                return True
         # 如果文件不存在，初始化字段名
         if not file_exists:
             # 使用数据中的键作为初始字段名
             fieldnames = list(mapped_data.keys())
             logger.info(f"创建新CSV文件: {csv_path}")
         
-        # 确保所有字段都在表头中
+        # 确保所有字段都在表头中，并保持正确的字段顺序
+        # 定义期望的字段顺序，日期字段应该在最前面
+        expected_order = ['日期', '小时', '主播', '场控', '场次']
+        
+        # 将新字段按照期望顺序插入，避免重复
         for key in mapped_data:
             if key not in fieldnames:
                 logger.warning(f"CSV表头缺少字段: {key}，已添加")
-                fieldnames.append(key)
+                if key in expected_order:
+                    # 按照期望顺序插入
+                    insert_index = expected_order.index(key)
+                    # 找到合适的插入位置
+                    actual_insert_index = 0
+                    for i, expected_field in enumerate(expected_order[:insert_index]):
+                        if expected_field in fieldnames:
+                            actual_insert_index = fieldnames.index(expected_field) + 1
+                    fieldnames.insert(actual_insert_index, key)
+                else:
+                    # 其他字段添加到末尾，但要避免重复
+                    fieldnames.append(key)
         
-        # 写入数据
+        # 写入数据 - 确保正确的换行处理
         with open(csv_path, 'a', encoding='utf-8', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             

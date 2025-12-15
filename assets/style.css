@@ -213,6 +213,128 @@ footer {
     animation: fadeInUp 0.6s ease-out;
 }
 
+/* 话术分析相关样式 */
+.script-analysis-header {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px 0;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.analysis-icon {
+    font-size: 2.5em;
+    margin-right: 15px;
+}
+
+.analysis-content h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.4em;
+    font-weight: 600;
+}
+
+.analysis-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.95em;
+}
+
+.script-metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    margin: 10px 5px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.script-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 2em;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.metric-label {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.metric-status {
+    font-size: 0.8em;
+    color: #888;
+    font-style: italic;
+}
+
+.scenario-analysis-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    transition: background-color 0.2s ease;
+}
+
+.scenario-analysis-card:hover {
+    background: #e9ecef;
+}
+
+.scenario-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.scenario-icon {
+    font-size: 1.2em;
+    margin-right: 10px;
+}
+
+.scenario-name {
+    font-weight: 600;
+    color: #333;
+    flex-grow: 1;
+}
+
+.scenario-coverage {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #e3f2fd;
+    color: #1976d2;
+    font-size: 0.9em;
+}
+
+.scenario-details {
+    font-size: 0.9em;
+    color: #666;
+    line-height: 1.5;
+}
+
+.scenario-details p {
+    margin: 5px 0;
+}
+
+.scenario-details strong {
+    color: #333;
+}
+
 /* 文本渐变效果 */
 .performance-section h3,
 .performance-section h4 {

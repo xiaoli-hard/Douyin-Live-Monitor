@@ -110,5 +110,54 @@
     "strategy_id": "ai-gen-1753258513",
     "strategy_name": "黄金30秒逼单法",
     "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-25T12:08:53.154877",
+    "report_timestamp": "2025-07-25T11:14:32.855539",
+    "strategy_id": "ai-gen-1753413227",
+    "strategy_name": "商品点击转化双提升",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-25T15:54:39.631816",
+    "report_timestamp": "2025-07-25T15:14:18.775045",
+    "strategy_id": "ai-gen-1753427608",
+    "strategy_name": "曝光进入率提升战术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-25T16:40:07.670339",
+    "report_timestamp": "2025-07-25T16:14:12.238658",
+    "strategy_id": "ai-gen-1753431216",
+    "strategy_name": "高价值套餐强推战术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-25T17:37:11.724351",
+    "report_timestamp": "2025-07-25T17:13:58.142640",
+    "strategy_id": "ai-gen-1753434798",
+    "strategy_name": "巩固高转化话术，强化画面引流优势",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-28T12:28:30.347270",
+    "report_timestamp": "2025-07-28T12:14:33.020075",
+    "strategy_id": "ai-gen-1753676010",
+    "strategy_name": "风险逆转强化话术",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-28T12:28:33.715280",
+    "report_timestamp": "2025-07-28T12:14:33.020075",
+    "strategy_id": "ai-gen-1753676009",
+    "strategy_name": "库存倒计时逼单法",
+    "action": "adopted"
+  },
+  {
+    "feedback_time": "2025-07-28T17:58:27.756227",
+    "report_timestamp": "2025-07-28T17:14:12.694970",
+    "strategy_id": "ai-gen-1753693993",
+    "strategy_name": "高价值套餐锚定战术",
+    "action": "adopted"
   }
 ]

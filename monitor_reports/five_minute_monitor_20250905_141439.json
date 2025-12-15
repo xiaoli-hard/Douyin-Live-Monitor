@@ -1,0 +1,30 @@
+{
+  "monitor_time": "2025-09-05 14:14:39",
+  "time_window": "最近5分钟",
+  "total_transcripts": 63,
+  "keyword_detection": {
+    "chat_count": 0,
+    "instances": []
+  },
+  "ai_analysis": {
+    "is_off_topic": true,
+    "risk_level": "high",
+    "confidence_score": 0.95,
+    "detected_keywords": [
+      "洗发水",
+      "精油",
+      "欧莱雅",
+      "护发",
+      "成分"
+    ],
+    "off_topic_content": "主播持续介绍巴黎欧莱雅精油洗发水，包括产品成分（八重花卉精粹油、微蜜级小分子结构）、功效（改善干枯打结、修护受损发质）、价格优惠（十九块钱三大罐正装量）及促销活动（最后三单福利库存、官方正品保障），完全偏离室内游乐园主题",
+    "duration_estimate": "180",
+    "recommendation": "建议主播立即停止洗发水相关介绍，回归室内游乐园项目、价格优惠等原定直播主题"
+  },
+  "alert_trigger": {
+    "should_alert": true,
+    "alert_level": "critical",
+    "alert_message": "🚨 直播摸鱼检测报告\n⏰ 检测时间：2025-09-05 14:11:05至14:14:11\n📊 风险等级：high\n🎯 偏离内容：主播持续3分钟介绍与游乐园无关的巴黎欧莱雅洗发水，包括成分、功效及促销活动\n⏱️ 持续时长：180秒\n💡 建议：立即回归室内游乐园项目介绍及相关营销内容"
+  },
+  "alert_level": "high"
+}
